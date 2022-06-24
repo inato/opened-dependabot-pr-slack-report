@@ -1,4 +1,11 @@
 {
   "name": "opened-dependabot-pr-slack-report",
+  "version": "0.0.1",
+  "description": "Tool to report to Slack the list of dependabot pull requests currently opened",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inato/opened-dependabot-pr-slack-report.git"
+  },
   "packageManager": "yarn@3.2.0"
 }
