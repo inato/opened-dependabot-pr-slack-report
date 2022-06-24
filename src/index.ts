@@ -1,8 +1,16 @@
 import { Block, KnownBlock, WebClient } from "@slack/web-api";
 import "dotenv/config";
-import { reader, readerTask, readerTaskEither, taskEither } from "fp-ts";
+import {
+  option,
+  reader,
+  readerTaskEither,
+  readonlyArray,
+  readonlyNonEmptyArray,
+  readonlyRecord,
+  string,
+  taskEither,
+} from "fp-ts";
 import { pipe } from "fp-ts/function";
-import { groupBy } from "lodash";
 import { Octokit } from "octokit";
 
 const parseEnvironmentVariables = async () => {
@@ -82,38 +90,19 @@ const getPullRequestsToPublish = () =>
     )
   );
 
-const publishToSlack = (
+const formatPullRequestsForSlack = (
   pullRequests: ReadonlyArray<{
     title: string;
     url: string;
     repo: string;
   }>
-) => {
-  if (pullRequests.length === 0) {
-    return postSlackMessage([
-      {
-        type: "section",
-        text: {
-          type: "mrkdwn",
-          text: `:tada: *No opened dependabot pull request*`,
-        },
-      },
-    ]);
-  }
-  const grouped = groupBy(pullRequests, ({ repo }) => repo);
-  const blocks = [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "*Currently opened dependabot pull request:*",
-      },
-    },
-    {
-      type: "divider",
-    },
-    ...Object.entries(grouped)
-      .map(([repo, pullRequests]) => [
+) =>
+  pipe(
+    pullRequests,
+    readonlyNonEmptyArray.fromReadonlyArray,
+    option.map(readonlyNonEmptyArray.groupBy(({ repo }) => repo)),
+    option.map(
+      readonlyRecord.mapWithIndex((repo, pullRequests) => [
         {
           type: "section",
           text: {
@@ -131,13 +120,23 @@ const publishToSlack = (
           },
         },
       ])
-      .flat(),
-  ];
+    ),
+    option.map(
+      readonlyRecord.collect(string.Ord)((_repo, sections) => sections)
+    ),
+    option.map(readonlyArray.flatten),
+    option.getOrElseW(() => [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:tada: *No opened dependabot pull request*`,
+        },
+      },
+    ])
+  );
 
-  return postSlackMessage(blocks);
-};
-
-const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
+const postSlackMessage = (blocks: ReadonlyArray<Block | KnownBlock>) =>
   reader.asks(
     ({
       slackChannel,
@@ -149,7 +148,7 @@ const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
       taskEither.tryCatch(
         () =>
           new WebClient(slackToken).chat.postMessage({
-            blocks,
+            blocks: readonlyArray.toArray(blocks),
             channel: slackChannel,
           }),
         (e) =>
@@ -166,7 +165,8 @@ const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
     await parseEnvironmentVariables();
   return pipe(
     getPullRequestsToPublish(),
-    readerTaskEither.chainW(publishToSlack),
+    readerTaskEither.map(formatPullRequestsForSlack),
+    readerTaskEither.chainW(postSlackMessage),
     readerTaskEither.match(
       (e) => {
         console.error(e);
