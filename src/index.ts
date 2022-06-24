@@ -1,9 +1,19 @@
+import { Block, KnownBlock, WebClient } from "@slack/web-api";
 import "dotenv/config";
+import {
+  option,
+  reader,
+  readerTaskEither,
+  readonlyArray,
+  readonlyNonEmptyArray,
+  readonlyRecord,
+  string,
+  taskEither,
+} from "fp-ts";
+import { pipe } from "fp-ts/function";
 import { Octokit } from "octokit";
-import { WebClient } from "@slack/web-api";
-import { groupBy } from "lodash";
 
-const parseEnvironmentVariables = async () => {
+const parseEnvironmentVariables = () => {
   const githubToken = process.env.GITHUB_TOKEN;
   if (!githubToken || githubToken.length === 0) {
     throw new Error(
@@ -39,67 +49,61 @@ const parseEnvironmentVariables = async () => {
   };
 };
 
-const getPullRequestsToPublish = async (
-  githubToken: string,
-  repositories: ReadonlyArray<string>
-) => {
-  const {
-    data: { items: pullRequests },
-  } = await new Octokit({
-    auth: githubToken,
-  }).rest.search.issuesAndPullRequests({
-    q: `state:open type:pr author:app/dependabot ${repositories
-      .map((repo) => `repo:${repo}`)
-      .join(" ")}`,
-  });
+const githubRepoApiBaseUrl = "https://api.github.com/repos/";
+const getRepositoryNameFromRepositoryUrl = (repositoryUrl: string) =>
+  repositoryUrl.replace(githubRepoApiBaseUrl, "");
 
-  return pullRequests.map((pr) => ({
-    title: pr.title,
-    url: pr.html_url,
-    repo: pr.repository_url.replace("https://api.github.com/repos/inato/", ""),
-  }));
-};
+const getPullRequestsToPublish = () =>
+  pipe(
+    reader.asks(
+      ({
+        githubToken,
+        repositories,
+      }: {
+        githubToken: string;
+        repositories: ReadonlyArray<string>;
+      }) =>
+        taskEither.tryCatch(
+          () =>
+            new Octokit({
+              auth: githubToken,
+            }).rest.search.issuesAndPullRequests({
+              q: `state:open type:pr author:app/dependabot ${repositories
+                .map((repo) => `repo:${repo}`)
+                .join(" ")}`,
+            }),
+          (e) =>
+            e instanceof Error
+              ? e
+              : new Error(
+                  `An error occurred when calling github api: ${JSON.stringify(
+                    e
+                  )}`
+                )
+        )
+    ),
+    readerTaskEither.map(({ data: { items } }) =>
+      items.map((pullRequest) => ({
+        title: pullRequest.title,
+        url: pullRequest.html_url,
+        repo: getRepositoryNameFromRepositoryUrl(pullRequest.repository_url),
+      }))
+    )
+  );
 
-const publishToSlack = (
-  slackChannel: string,
-  slackToken: string,
+const formatPullRequestsForSlack = (
   pullRequests: ReadonlyArray<{
     title: string;
     url: string;
     repo: string;
   }>
-) => {
-  const grouped = groupBy(pullRequests, ({ repo }) => repo);
-  const groupedAsObjectEntries = Object.entries(grouped);
-
-  if (groupedAsObjectEntries.length === 0) {
-    return new WebClient(slackToken).chat.postMessage({
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `:tada: *No opened dependabot pull request*`,
-          },
-        },
-      ],
-      channel: slackChannel,
-    });
-  }
-
-  const blocks = [
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: "*Currently opened dependabot pull request:*",
-      },
-    },
-    {
-      type: "divider",
-    },
-    ...groupedAsObjectEntries
-      .map(([repo, pullRequests]) => [
+) =>
+  pipe(
+    pullRequests,
+    readonlyNonEmptyArray.fromReadonlyArray,
+    option.map(readonlyNonEmptyArray.groupBy(({ repo }) => repo)),
+    option.map(
+      readonlyRecord.mapWithIndex((repo, pullRequests) => [
         {
           type: "section",
           text: {
@@ -117,21 +121,58 @@ const publishToSlack = (
           },
         },
       ])
-      .flat(),
-  ];
-
-  return new WebClient(slackToken).chat.postMessage({
-    blocks,
-    channel: slackChannel,
-  });
-};
-
-(async () => {
-  const { slackChannel, repositories, slackToken, githubToken } =
-    await parseEnvironmentVariables();
-  return publishToSlack(
-    slackChannel,
-    slackToken,
-    await getPullRequestsToPublish(githubToken, repositories)
+    ),
+    option.map(
+      readonlyRecord.collect(string.Ord)((_repo, sections) => sections)
+    ),
+    option.map(readonlyArray.flatten),
+    option.getOrElseW(() => [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:tada: *No opened dependabot pull request*`,
+        },
+      },
+    ])
   );
-})();
+
+const postSlackMessage = (blocks: ReadonlyArray<Block | KnownBlock>) =>
+  reader.asks(
+    ({
+      slackChannel,
+      slackToken,
+    }: {
+      slackChannel: string;
+      slackToken: string;
+    }) =>
+      taskEither.tryCatch(
+        () =>
+          new WebClient(slackToken).chat.postMessage({
+            blocks: readonlyArray.toArray(blocks),
+            channel: slackChannel,
+          }),
+        (e) =>
+          e instanceof Error
+            ? e
+            : new Error(
+                `An error occurred when calling slack api: ${JSON.stringify(e)}`
+              )
+      )
+  );
+
+(async () =>
+  pipe(
+    getPullRequestsToPublish(),
+    readerTaskEither.map(formatPullRequestsForSlack),
+    readerTaskEither.chainW(postSlackMessage),
+    readerTaskEither.match(
+      (e) => {
+        console.error(e);
+        process.exit(1);
+      },
+      () => {
+        console.log("Success!");
+      }
+    )
+  )(parseEnvironmentVariables())())();
