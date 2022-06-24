@@ -13,7 +13,7 @@ import {
 import { pipe } from "fp-ts/function";
 import { Octokit } from "octokit";
 
-const parseEnvironmentVariables = async () => {
+const parseEnvironmentVariables = () => {
   const githubToken = process.env.GITHUB_TOKEN;
   if (!githubToken || githubToken.length === 0) {
     throw new Error(
@@ -160,10 +160,8 @@ const postSlackMessage = (blocks: ReadonlyArray<Block | KnownBlock>) =>
       )
   );
 
-(async () => {
-  const { slackChannel, repositories, slackToken, githubToken } =
-    await parseEnvironmentVariables();
-  return pipe(
+(async () =>
+  pipe(
     getPullRequestsToPublish(),
     readerTaskEither.map(formatPullRequestsForSlack),
     readerTaskEither.chainW(postSlackMessage),
@@ -176,5 +174,4 @@ const postSlackMessage = (blocks: ReadonlyArray<Block | KnownBlock>) =>
         console.log("Success!");
       }
     )
-  )({ githubToken, repositories, slackChannel, slackToken })();
-})();
+  )(parseEnvironmentVariables())())();
