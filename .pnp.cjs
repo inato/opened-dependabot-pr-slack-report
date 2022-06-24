@@ -36,6 +36,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@slack/web-api", "npm:6.7.2"],\
             ["@types/lodash", "npm:4.14.182"],\
             ["dotenv", "npm:16.0.1"],\
+            ["fp-ts", "npm:2.12.1"],\
             ["lodash", "npm:4.17.21"],\
             ["octokit", "npm:1.8.1"],\
             ["ts-node", "virtual:ff2c9d5dafb5723610e78a174b865ffdf0e40882205fdbb7cf7ab6a9c578b647bb9d731645e99cccdd7e7758c8455430a1e01d4da6992bc3557d0099357bc72e#npm:10.8.1"],\
@@ -890,6 +891,15 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["fp-ts", [\
+        ["npm:2.12.1", {\
+          "packageLocation": "./.yarn/cache/fp-ts-npm-2.12.1-8cb5201f64-1e20e6b468.zip/node_modules/fp-ts/",\
+          "packageDependencies": [\
+            ["fp-ts", "npm:2.12.1"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["fromentries", [\
         ["npm:1.3.2", {\
           "packageLocation": "./.yarn/cache/fromentries-npm-1.3.2-f5392090b8-33729c529c.zip/node_modules/fromentries/",\
@@ -1217,6 +1227,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@slack/web-api", "npm:6.7.2"],\
             ["@types/lodash", "npm:4.14.182"],\
             ["dotenv", "npm:16.0.1"],\
+            ["fp-ts", "npm:2.12.1"],\
             ["lodash", "npm:4.17.21"],\
             ["octokit", "npm:1.8.1"],\
             ["ts-node", "virtual:ff2c9d5dafb5723610e78a174b865ffdf0e40882205fdbb7cf7ab6a9c578b647bb9d731645e99cccdd7e7758c8455430a1e01d4da6992bc3557d0099357bc72e#npm:10.8.1"],\
