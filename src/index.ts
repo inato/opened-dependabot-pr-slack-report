@@ -1,7 +1,9 @@
+import { Block, KnownBlock, WebClient } from "@slack/web-api";
 import "dotenv/config";
-import { Octokit } from "octokit";
-import { WebClient } from "@slack/web-api";
+import { reader, readerTask } from "fp-ts";
+import { pipe } from "fp-ts/function";
 import { groupBy } from "lodash";
+import { Octokit } from "octokit";
 
 const parseEnvironmentVariables = async () => {
   const githubToken = process.env.GITHUB_TOKEN;
@@ -39,30 +41,38 @@ const parseEnvironmentVariables = async () => {
   };
 };
 
-const getPullRequestsToPublish = async (
-  githubToken: string,
-  repositories: ReadonlyArray<string>
-) => {
-  const {
-    data: { items: pullRequests },
-  } = await new Octokit({
-    auth: githubToken,
-  }).rest.search.issuesAndPullRequests({
-    q: `state:open type:pr author:app/dependabot ${repositories
-      .map((repo) => `repo:${repo}`)
-      .join(" ")}`,
-  });
-
-  return pullRequests.map((pr) => ({
-    title: pr.title,
-    url: pr.html_url,
-    repo: pr.repository_url.replace("https://api.github.com/repos/inato/", ""),
-  }));
-};
+const getPullRequestsToPublish = () =>
+  pipe(
+    reader.asks(
+      ({
+          githubToken,
+          repositories,
+        }: {
+          githubToken: string;
+          repositories: ReadonlyArray<string>;
+        }) =>
+        () =>
+          new Octokit({
+            auth: githubToken,
+          }).rest.search.issuesAndPullRequests({
+            q: `state:open type:pr author:app/dependabot ${repositories
+              .map((repo) => `repo:${repo}`)
+              .join(" ")}`,
+          })
+    ),
+    readerTask.map(({ data: { items } }) =>
+      items.map((pullRequest) => ({
+        title: pullRequest.title,
+        url: pullRequest.html_url,
+        repo: pullRequest.repository_url.replace(
+          "https://api.github.com/repos/inato/",
+          ""
+        ),
+      }))
+    )
+  );
 
 const publishToSlack = (
-  slackChannel: string,
-  slackToken: string,
   pullRequests: ReadonlyArray<{
     title: string;
     url: string;
@@ -73,18 +83,15 @@ const publishToSlack = (
   const groupedAsObjectEntries = Object.entries(grouped);
 
   if (groupedAsObjectEntries.length === 0) {
-    return new WebClient(slackToken).chat.postMessage({
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `:tada: *No opened dependabot pull request*`,
-          },
+    return postSlackMessage([
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:tada: *No opened dependabot pull request*`,
         },
-      ],
-      channel: slackChannel,
-    });
+      },
+    ]);
   }
 
   const blocks = [
@@ -120,18 +127,30 @@ const publishToSlack = (
       .flat(),
   ];
 
-  return new WebClient(slackToken).chat.postMessage({
-    blocks,
-    channel: slackChannel,
-  });
+  return postSlackMessage(blocks);
 };
+
+const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
+  reader.asks(
+    ({
+        slackChannel,
+        slackToken,
+      }: {
+        slackChannel: string;
+        slackToken: string;
+      }) =>
+      () =>
+        new WebClient(slackToken).chat.postMessage({
+          blocks,
+          channel: slackChannel,
+        })
+  );
 
 (async () => {
   const { slackChannel, repositories, slackToken, githubToken } =
     await parseEnvironmentVariables();
-  return publishToSlack(
-    slackChannel,
-    slackToken,
-    await getPullRequestsToPublish(githubToken, repositories)
-  );
+  return pipe(
+    getPullRequestsToPublish(),
+    readerTask.chainW(publishToSlack)
+  )({ githubToken, repositories, slackChannel, slackToken })();
 })();
