@@ -49,6 +49,10 @@ const parseEnvironmentVariables = () => {
   };
 };
 
+const githubRepoApiBaseUrl = "https://api.github.com/repos/";
+const getRepositoryNameFromRepositoryUrl = (repositoryUrl: string) =>
+  repositoryUrl.replace(githubRepoApiBaseUrl, "");
+
 const getPullRequestsToPublish = () =>
   pipe(
     reader.asks(
@@ -82,10 +86,7 @@ const getPullRequestsToPublish = () =>
       items.map((pullRequest) => ({
         title: pullRequest.title,
         url: pullRequest.html_url,
-        repo: pullRequest.repository_url.replace(
-          "https://api.github.com/repos/inato/",
-          ""
-        ),
+        repo: getRepositoryNameFromRepositoryUrl(pullRequest.repository_url),
       }))
     )
   );
