@@ -1,6 +1,6 @@
 import { Block, KnownBlock, WebClient } from "@slack/web-api";
 import "dotenv/config";
-import { reader, readerTask } from "fp-ts";
+import { reader, readerTask, readerTaskEither, taskEither } from "fp-ts";
 import { pipe } from "fp-ts/function";
 import { groupBy } from "lodash";
 import { Octokit } from "octokit";
@@ -45,22 +45,32 @@ const getPullRequestsToPublish = () =>
   pipe(
     reader.asks(
       ({
-          githubToken,
-          repositories,
-        }: {
-          githubToken: string;
-          repositories: ReadonlyArray<string>;
-        }) =>
-        () =>
-          new Octokit({
-            auth: githubToken,
-          }).rest.search.issuesAndPullRequests({
-            q: `state:open type:pr author:app/dependabot ${repositories
-              .map((repo) => `repo:${repo}`)
-              .join(" ")}`,
-          })
+        githubToken,
+        repositories,
+      }: {
+        githubToken: string;
+        repositories: ReadonlyArray<string>;
+      }) =>
+        taskEither.tryCatch(
+          () =>
+            new Octokit({
+              auth: githubToken,
+            }).rest.search.issuesAndPullRequests({
+              q: `state:open type:pr author:app/dependabot ${repositories
+                .map((repo) => `repo:${repo}`)
+                .join(" ")}`,
+            }),
+          (e) =>
+            e instanceof Error
+              ? e
+              : new Error(
+                  `An error occurred when calling github api: ${JSON.stringify(
+                    e
+                  )}`
+                )
+        )
     ),
-    readerTask.map(({ data: { items } }) =>
+    readerTaskEither.map(({ data: { items } }) =>
       items.map((pullRequest) => ({
         title: pullRequest.title,
         url: pullRequest.html_url,
@@ -133,17 +143,25 @@ const publishToSlack = (
 const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
   reader.asks(
     ({
-        slackChannel,
-        slackToken,
-      }: {
-        slackChannel: string;
-        slackToken: string;
-      }) =>
-      () =>
-        new WebClient(slackToken).chat.postMessage({
-          blocks,
-          channel: slackChannel,
-        })
+      slackChannel,
+      slackToken,
+    }: {
+      slackChannel: string;
+      slackToken: string;
+    }) =>
+      taskEither.tryCatch(
+        () =>
+          new WebClient(slackToken).chat.postMessage({
+            blocks,
+            channel: slackChannel,
+          }),
+        (e) =>
+          e instanceof Error
+            ? e
+            : new Error(
+                `An error occurred when calling slack api: ${JSON.stringify(e)}`
+              )
+      )
   );
 
 (async () => {
@@ -151,6 +169,15 @@ const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
     await parseEnvironmentVariables();
   return pipe(
     getPullRequestsToPublish(),
-    readerTask.chainW(publishToSlack)
+    readerTaskEither.chainW(publishToSlack),
+    readerTaskEither.match(
+      (e) => {
+        console.error(e);
+        process.exit(1);
+      },
+      () => {
+        console.log("success");
+      }
+    )
   )({ githubToken, repositories, slackChannel, slackToken })();
 })();
