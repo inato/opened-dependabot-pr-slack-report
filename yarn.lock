@@ -631,6 +631,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dotenv@npm:^16.0.1":
+  version: 16.0.1
+  resolution: "dotenv@npm:16.0.1"
+  checksum: f459ffce07b977b7f15d8cc4ee69cdff77d4dd8c5dc8c85d2d485ee84655352c2415f9dd09d42b5b5985ced3be186130871b34e2f3e2569ebc72fbc2e8096792
+  languageName: node
+  linkType: hard
+
 "ecdsa-sig-formatter@npm:1.0.11":
   version: 1.0.11
   resolution: "ecdsa-sig-formatter@npm:1.0.11"
@@ -971,6 +978,7 @@ __metadata:
   dependencies:
     "@slack/web-api": ^6.7.2
     "@types/lodash": ^4
+    dotenv: ^16.0.1
     lodash: ^4.17.21
     octokit: ^1.8.1
     ts-node: ^10.8.1

@@ -35,6 +35,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["@slack/web-api", "npm:6.7.2"],\
             ["@types/lodash", "npm:4.14.182"],\
+            ["dotenv", "npm:16.0.1"],\
             ["lodash", "npm:4.17.21"],\
             ["octokit", "npm:1.8.1"],\
             ["ts-node", "virtual:ff2c9d5dafb5723610e78a174b865ffdf0e40882205fdbb7cf7ab6a9c578b647bb9d731645e99cccdd7e7758c8455430a1e01d4da6992bc3557d0099357bc72e#npm:10.8.1"],\
@@ -792,6 +793,15 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["dotenv", [\
+        ["npm:16.0.1", {\
+          "packageLocation": "./.yarn/cache/dotenv-npm-16.0.1-d99e72bb95-f459ffce07.zip/node_modules/dotenv/",\
+          "packageDependencies": [\
+            ["dotenv", "npm:16.0.1"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["ecdsa-sig-formatter", [\
         ["npm:1.0.11", {\
           "packageLocation": "./.yarn/cache/ecdsa-sig-formatter-npm-1.0.11-b6784e7852-207f9ab1c2.zip/node_modules/ecdsa-sig-formatter/",\
@@ -1206,6 +1216,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["opened-dependabot-pr-slack-report", "workspace:."],\
             ["@slack/web-api", "npm:6.7.2"],\
             ["@types/lodash", "npm:4.14.182"],\
+            ["dotenv", "npm:16.0.1"],\
             ["lodash", "npm:4.17.21"],\
             ["octokit", "npm:1.8.1"],\
             ["ts-node", "virtual:ff2c9d5dafb5723610e78a174b865ffdf0e40882205fdbb7cf7ab6a9c578b647bb9d731645e99cccdd7e7758c8455430a1e01d4da6992bc3557d0099357bc72e#npm:10.8.1"],\

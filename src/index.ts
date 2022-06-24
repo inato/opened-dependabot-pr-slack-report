@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Octokit } from "octokit";
 import { WebClient } from "@slack/web-api";
 import { groupBy } from "lodash";
