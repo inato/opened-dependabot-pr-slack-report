@@ -89,10 +89,7 @@ const publishToSlack = (
     repo: string;
   }>
 ) => {
-  const grouped = groupBy(pullRequests, ({ repo }) => repo);
-  const groupedAsObjectEntries = Object.entries(grouped);
-
-  if (groupedAsObjectEntries.length === 0) {
+  if (pullRequests.length === 0) {
     return postSlackMessage([
       {
         type: "section",
@@ -103,7 +100,7 @@ const publishToSlack = (
       },
     ]);
   }
-
+  const grouped = groupBy(pullRequests, ({ repo }) => repo);
   const blocks = [
     {
       type: "section",
@@ -115,7 +112,7 @@ const publishToSlack = (
     {
       type: "divider",
     },
-    ...groupedAsObjectEntries
+    ...Object.entries(grouped)
       .map(([repo, pullRequests]) => [
         {
           type: "section",
@@ -176,7 +173,7 @@ const postSlackMessage = (blocks: Array<Block | KnownBlock>) =>
         process.exit(1);
       },
       () => {
-        console.log("success");
+        console.log("Success!");
       }
     )
   )({ githubToken, repositories, slackChannel, slackToken })();
