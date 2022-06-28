@@ -35,6 +35,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["@slack/web-api", "npm:6.7.2"],\
             ["@types/lodash", "npm:4.14.182"],\
+            ["@types/node", "npm:18.0.0"],\
             ["dotenv", "npm:16.0.1"],\
             ["fp-ts", "npm:2.12.1"],\
             ["lodash", "npm:4.17.21"],\
@@ -1226,6 +1227,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["opened-dependabot-pr-slack-report", "workspace:."],\
             ["@slack/web-api", "npm:6.7.2"],\
             ["@types/lodash", "npm:4.14.182"],\
+            ["@types/node", "npm:18.0.0"],\
             ["dotenv", "npm:16.0.1"],\
             ["fp-ts", "npm:2.12.1"],\
             ["lodash", "npm:4.17.21"],\
@@ -1375,7 +1377,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@tsconfig/node12", "npm:1.0.11"],\
             ["@tsconfig/node14", "npm:1.0.3"],\
             ["@tsconfig/node16", "npm:1.0.3"],\
-            ["@types/node", null],\
+            ["@types/node", "npm:18.0.0"],\
             ["@types/swc__core", null],\
             ["@types/swc__wasm", null],\
             ["@types/typescript", null],\
